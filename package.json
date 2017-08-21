@@ -1,0 +1,52 @@
+{
+  "name": "email-setup",
+  "version": "0.0.0",
+  "description": "Collection of utilities for checking email configuration settings.",
+  "main": "index.js",
+  "repository": "https://github.com/mixmaxhq/email-setup",
+  "author": "Trey Tacon <trey@mixmax.com> (https://mixmax.com)",
+  "license": "MIT",
+  "dependencies": {
+    "dmarc-parse": "^1.0.2",
+    "global": "^4.3.2",
+    "promise-callbacks": "^3.0.0",
+    "semver": "^5.4.1",
+    "spf-parse": "^1.0.4",
+    "underscore": "^1.8.3"
+  },
+  "devDependencies": {
+    "ava": "^0.22.0",
+    "ava-spec": "^1.1.0",
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "nyc": "^11.1.0",
+    "rewire": "^2.5.2",
+    "sinon": "^3.2.1"
+  },
+  "engines": {
+    "node": ">= 6.9.1"
+  },
+  "scripts": {
+    "babelBuild": "babel src -d dist/node",
+    "prepublish": "yarn run babelBuild",
+    "report": "nyc ava",
+    "test": "ava"
+  },
+  "ava": {
+    "require": [
+      "babel-register"
+    ],
+    "timeout": "60s",
+    "files": [
+      "spec/**/*Spec.js"
+    ]
+  },
+  "nyc": {
+    "exclude": [
+      "index.js",
+      "spec",
+      "dist"
+      ]
+  }
+}
