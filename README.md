@@ -63,5 +63,6 @@ let isSetup = await hasDKIMRecordForSelector('foo.com', 'google');
 
 
 ## Changelog
+* 1.0.2 Add `eslint` and don't publish `dist/`.
 * 1.0.1 `dist/` cleanup and README updates.
 * 1.0.0 Initial release.
