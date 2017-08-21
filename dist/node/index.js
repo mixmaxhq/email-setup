@@ -91,18 +91,14 @@ let _getDNSTXTRecords = (() => {
   var _ref4 = _asyncToGenerator(function* (domain) {
     let dnsProm = deferred();
     dns.resolveTxt(domain, dnsProm.defer());
-    console.log('bolo');
+
     try {
       let records = yield dnsProm;
-      console.log(records);
       return records;
     } catch (err) {
-      console.log(err);
       if (_.contains(NO_DNS_RECORD, err.code)) {
-        console.log('returning null');
         return null;
       } else {
-        console.log('rethrowing');
         throw err;
       }
     }
