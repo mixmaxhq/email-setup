@@ -36,7 +36,7 @@
   "scripts": {
     "babelBuild": "babel src -d dist/node",
     "lint": "eslint .",
-    "prepublish": "yarn run babelBuild",
+    "prepublish": "npm run babelBuild",
     "report": "nyc ava",
     "test": "ava"
   },
