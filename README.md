@@ -3,7 +3,7 @@ Collection of utilities for checking email configuration settings.
 
 ## Installation
 ```sh
-yarn add email-setup
+npm install email-setup
 ```
 
 ## Usage
