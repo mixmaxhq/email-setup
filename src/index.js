@@ -14,7 +14,11 @@ const spfParse = require('spf-parse');
 
 // DNS error codes to use to determine if a record doesn't exist versus
 // an error with retrieving a DNS record (i.e. a network issue).
-const NO_DNS_RECORD = [dns.NOTFOUND, dns.NODATA];
+//
+// Also consider ESERVFAIL as a missing DNS record. Some DNS servers
+// seem to prefer that response code instead of NOTFOUND (i.e. the
+// nameservers at datagram.com).
+const NO_DNS_RECORD = [dns.NOTFOUND, dns.NODATA, dns.SERVFAIL];
 
 // Constants to export to allow users to compare setup values.
 const NOT_SETUP = 'not_setup',

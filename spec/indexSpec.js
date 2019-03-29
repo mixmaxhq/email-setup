@@ -15,7 +15,7 @@ const { INVALID, NOT_SETUP, SETUP } = emailSetup;
  * @returns {Error} The synthesized error to return.
  */
 function dnsErr(errCode) {
-  let err = new Error('dns error');
+  const err = new Error('dns error');
   err.code = errCode;
   return err;
 }
@@ -33,11 +33,12 @@ const domainSPFResults = {
   '_dmarc.no.spf.com': { err: dnsErr(dns.NOTFOUND) },
   '_dmarc.invalid.spf.com': { err: null, value: [['invalid dmarc']] },
   '_dmarc.valid.spf.com': { err: null, value: [['v=DMARC1; p=none']] },
+  'google._domainkey.missing-dkim.com': { err: dnsErr(dns.SERVFAIL) },
 };
 
 test.before('before DNS tests', () => {
   sinon.stub(dns, 'resolveTxt').callsFake((domain, done) => {
-    let val = domainSPFResults[domain];
+    const val = domainSPFResults[domain];
     if (val) done(val.err, val.value);
     else done(new Error('no such domain'));
   });
@@ -70,6 +71,10 @@ describe('hasSPFSender', (it) => {
 describe('hasDKIMRecordForSelector', (it) => {
   it('should return \'not_setup\' for domains w/ TXT records at the selector', async (t) => {
     t.is(await emailSetup.hasDKIMRecordForSelector('no.spf.com', 'google'), NOT_SETUP);
+  });
+
+  it('should return \'not_setup\' for domains w/ TXT records at the selector', async (t) => {
+    t.is(await emailSetup.hasDKIMRecordForSelector('missing-dkim.com', 'google'), NOT_SETUP);
   });
 
   it('should return \'setup\' for domains w/ TXT records at the selector', async (t) => {
