@@ -35,8 +35,9 @@
   },
   "scripts": {
     "babelBuild": "babel src -d dist/node",
+    "ci": "npm run lint && npm test",
     "lint": "eslint .",
-    "prepublish": "npm run babelBuild",
+    "prepublishOnly": "npm run babelBuild",
     "report": "nyc ava",
     "test": "ava"
   },
