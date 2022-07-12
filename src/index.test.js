@@ -81,14 +81,14 @@ describe('hasDKIMRecordForSelector', () => {
 
 describe('dmarcSetup', () => {
   it('should return \'not_setup\' for a domain with no DMARC record', async () => {
-    expect(await emailSetup.spfSetup('no.spf.com')).toBe(NOT_SETUP);
+    expect(await emailSetup.dmarcSetup('no.spf.com')).toBe(NOT_SETUP);
   });
 
   it('should return \'invalid\' for a domain with an invalid DMARC record', async () => {
-    expect(await emailSetup.spfSetup('invalid.spf.com')).toBe(INVALID);
+    expect(await emailSetup.dmarcSetup('invalid.spf.com')).toBe(INVALID);
   });
 
   it('should return \'setup\' for a domain with a valid DMARC record', async () => {
-    expect(await emailSetup.spfSetup('valid.spf.com')).toBe(SETUP);
+    expect(await emailSetup.dmarcSetup('valid.spf.com')).toBe(SETUP);
   });
 });
