@@ -20,6 +20,7 @@
     "src"
   ],
   "devDependencies": {
+    "@mixmaxhq/semantic-release-config": "^2.0.0",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-plugin-transform-async-to-generator": "^6.24.1",
@@ -27,7 +28,8 @@
     "eslint-plugin-jest": "^24.7.0",
     "jest": "^24.7.0",
     "jest-junit": "^8.0.0",
-    "prettier": "^2.0.5"
+    "prettier": "^2.0.5",
+    "semantic-release": "^17.2.3"
   },
   "engines": {
     "node": ">= 6.9.1"
@@ -37,7 +39,11 @@
     "ci": "npm run lint && npm test -- --coverage",
     "lint": "eslint .",
     "prepublishOnly": "npm run babelBuild",
+    "semantic-release": "SEMANTIC_COMMITLINT_SKIP=1dedf6783b294d7e935971c56f1648274ea39abb semantic-release",
     "test": "jest"
+  },
+  "release": {
+    "extends": "@mixmaxhq/semantic-release-config"
   },
   "jest": {
     "collectCoverageFrom": [
