@@ -21,6 +21,10 @@ const { SpfInspector } = require('spf-master');
 // nameservers at datagram.com).
 const NO_DNS_RECORD = [dns.NOTFOUND, dns.NODATA, dns.SERVFAIL];
 
+// Warnings from "spf-parse"
+const ALL_MECHANISM_IS_NOT_THE_LAST = 'One or more mechanisms were found after the "all" mechanism. These mechanisms will be ignored';
+const ALL_AND_REDIRECT_ARE_MISSING = 'SPF strings should always either use an "all" mechanism or a "redirect" modifier to explicitly terminate processing.';
+
 // Constants to export to allow users to compare setup values.
 const NOT_SETUP = 'not_setup',
   INVALID = 'invalid',
@@ -30,14 +34,31 @@ const NOT_SETUP = 'not_setup',
  * Checks whether a domain has setup a valid SPF record.
  *
  * @param {string} domain The domain to check the SPF record for.
+ * @param {object} validations Additional validations.
  * @returns {Promise} Resolves to true if the domain has a valid SPF record,
  *   false otherwise.
  */
-async function spfSetup(domain) {
+async function spfSetup(domain, { validations = {
+  allMechanismIsTheLast: false,
+  allMechanismOrRedirectModifierIsPresent: false,
+} } = {}) {
   let spfRecord = await _getSPFRecord(domain);
 
-  if (!spfRecord) return NOT_SETUP;
-  else if (!spfRecord.valid) return INVALID;
+  if (!spfRecord) {
+    return NOT_SETUP;
+  } else if (!spfRecord.valid) {
+    return INVALID;
+  } else if (spfRecord.messages) {
+    const allMechanismIsNotTheLast = spfRecord.messages.some(m => m.message === ALL_MECHANISM_IS_NOT_THE_LAST);
+    if (validations.allMechanismIsTheLast && allMechanismIsNotTheLast) {
+      return INVALID;
+    }
+
+    const allAndRedirectAreMissing = spfRecord.messages.some(m => m.message === ALL_AND_REDIRECT_ARE_MISSING);
+    if (validations.allMechanismOrRedirectModifierIsPresent && allAndRedirectAreMissing) {
+      return INVALID;
+    }
+  }
   return SETUP;
 }
 

@@ -22,6 +22,14 @@ const domainSPFResults = {
     err: null,
     value: [['v=spf1 redirect=foo.com redirect=bar.com ~all']]
   },
+  'invalid_without_all_mechanism.spf.com': {
+    err: null,
+    value: [['v=spf1 include:_spf.google.com']]
+  },
+  'invalid_with_all_mechanism_misplaced.spf.com': {
+    err: null,
+    value: [['v=spf1 -all include:_spf.google.com']]
+  },
   'valid.spf.com': { err: null, value: [['v=spf1 include:_spf.google.com -all']] },
   'google._domainkey.no.spf.com': { err: dnsErr(dns.NODATA) },
   'google._domainkey.valid.spf.com': { err: null, value: [['a value']] },
@@ -51,8 +59,24 @@ describe('spfSetup', () => {
     expect(await emailSetup.spfSetup('no.spf.com')).toBe(NOT_SETUP);
   });
 
-  it('should return \'invalid\' for a domain with an invalid SPF record', async () => {
+  it('should return \'invalid\' for a domain with an invalid SPF record (multiple redirects)', async () => {
     expect(await emailSetup.spfSetup('invalid.spf.com')).toBe(INVALID);
+  });
+
+  it('should return \'invalid\' for a domain with an invalid SPF record (no all)', async () => {
+    expect(await emailSetup.spfSetup('invalid_without_all_mechanism.spf.com', {
+      validations: {
+        allMechanismOrRedirectModifierIsPresent: true,
+      }
+    })).toBe(INVALID);
+  });
+
+  it('should return \'invalid\' for a domain with an invalid SPF record (misplaced all)', async () => {
+    expect(await emailSetup.spfSetup('invalid_with_all_mechanism_misplaced.spf.com', {
+      validations: {
+        allMechanismIsTheLast: true,
+      }
+    })).toBe(INVALID);
   });
 
   it('should return \'setup\' for a domain with a valid SPF record', async () => {
