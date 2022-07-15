@@ -11,6 +11,7 @@ const _ = require('underscore');
 const { deferred } = require('promise-callbacks');
 const dmarcParse = require('dmarc-parse');
 const spfParse = require('spf-parse');
+const { SpfInspector } = require('spf-master');
 
 // DNS error codes to use to determine if a record doesn't exist versus
 // an error with retrieving a DNS record (i.e. a network issue).
@@ -58,6 +59,47 @@ async function hasSPFSender(domain, sender) {
     type: 'include',
     value: sender
   });
+}
+
+/**
+ * Checks whether a domain has a SPF record which could be resolved within
+ * the provided number of DNS queries. RFC7208 (SPF specification) requires
+ * that the number of mechanisms and modifiers that do DNS lookups must not
+ * exceed 10 per SPF check:
+
+ * SPF implementations MUST limit the number of mechanisms and modifiers that
+ * do DNS lookups to at most 10 per SPF check, including any lookups caused by
+ * the use of the "include" mechanism or the "redirect" modifier.
+ * If this number is exceeded during a check, a PermError MUST be returned.
+ *
+ * The "include", "a", "mx", "ptr", and "exists" mechanisms as well as the
+ * "redirect" modifier do count against this limit.
+ *
+ * The "all", "ip4", and "ip6" mechanisms do not require DNS lookups and
+ * therefore do not count against this limit.
+ *
+ * NOTE: Currently, the underlying library "spf-master" resolves only
+ * "include" and "a" mechanisms. This might cause false positive results.
+ *
+ * @param {string} domain The domain to check the SPF record for.
+ * @param {number} limit The max allowed number of DNS lookups.
+ * @returns {Promise} Resolves to true if the number of DNS lookups for
+ * the SPF record is within limit, false otherwise.
+ */
+async function spfRecordResolvesWithinDnsLookupsLimit(domain, limit = 10) {
+  try {
+    const report = await SpfInspector(domain, { maxDepth: limit }, true);
+
+    const numberOfIncludeLookups = report.found.includes.length;
+    const numberOfALookups = report.found.domains.length;
+    return numberOfIncludeLookups + numberOfALookups <= limit;
+  } catch (err) {
+    if (_.contains(NO_DNS_RECORD, err.code)) {
+      return false;
+    } else {
+      throw err;
+    }
+  }
 }
 
 /**
@@ -177,6 +219,7 @@ async function dmarcSetup(domain) {
 
 module.exports = {
   spfSetup,
+  spfRecordResolvesWithinDnsLookupsLimit,
   hasSPFSender,
   hasDKIMRecordForSelector,
   dmarcSetup,

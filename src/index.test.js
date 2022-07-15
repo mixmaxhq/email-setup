@@ -29,15 +29,22 @@ const domainSPFResults = {
   '_dmarc.invalid.spf.com': { err: null, value: [['invalid dmarc']] },
   '_dmarc.valid.spf.com': { err: null, value: [['v=DMARC1; p=none']] },
   'google._domainkey.missing-dkim.com': { err: dnsErr(dns.SERVFAIL) },
+  'valid_with_include_and_a.spf.com': { err: null, value: [['v=spf1 include:valid_with_a.spf.com a:valid_with_only_all.spf.com -all']] },
+  'valid_with_a.spf.com': { err: null, value: [['v=spf1 a:valid_with_only_all.spf.com -all']] },
+  'valid_with_only_all.spf.com': { err: null, value: [['v=spf1 mx -all']] },
 };
 
-beforeAll(() => {
+beforeEach(() => {
   jest.spyOn(dns, 'resolveTxt').mockImplementation((domain, done) => {
     const val = domainSPFResults[domain];
     if (val) done(val.err, val.value);
     else done(new Error('no such domain'));
   });
 });
+
+afterEach(() => {
+  jest.restoreAllMocks();
+})
 
 describe('spfSetup', () => {
   it('should return \'not_setup\' for a domain with no SPF record', async () => {
@@ -62,6 +69,28 @@ describe('hasSPFSender', () => {
 
   it('should return true when the sender is allowed', async () => {
     expect(await emailSetup.hasSPFSender('valid.spf.com', '_spf.google.com')).toBe(true);
+  });
+});
+
+describe('spfRecordResolvesWithinDnsLookupsLimit', () => {
+  it('should return false for a domain with no SPF record', async () => {
+    expect(await emailSetup.spfRecordResolvesWithinDnsLookupsLimit('no.spf.com', 10000)).toBe(false);
+    expect(dns.resolveTxt.mock.calls.length).toBe(1);
+  });
+
+  it('should return true for a domain with an invalid SPF record resolving within limit', async () => {
+    expect(await emailSetup.spfRecordResolvesWithinDnsLookupsLimit('invalid.spf.com', 10)).toBe(true);
+    expect(dns.resolveTxt.mock.calls.length).toBe(1);
+  });
+
+  it('should return false when it does not resolve within DNS lookups limit', async () => {
+    expect(await emailSetup.spfRecordResolvesWithinDnsLookupsLimit('valid_with_include_and_a.spf.com', 1)).toBe(false);
+    expect(dns.resolveTxt.mock.calls.length).toBe(2);
+  });
+
+  it('should return true when it resolves within DNS lookups limit', async () => {
+    expect(await emailSetup.spfRecordResolvesWithinDnsLookupsLimit('valid_with_include_and_a.spf.com', 2)).toBe(true);
+    expect(dns.resolveTxt.mock.calls.length).toBe(2);
   });
 });
 
