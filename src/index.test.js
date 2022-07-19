@@ -30,7 +30,9 @@ const domainSPFResults = {
     err: null,
     value: [['v=spf1 -all include:_spf.google.com']]
   },
+  'valid_nested_include.spf.com': { err: null, value: [['v=spf1 include:valid.spf.com -all']] },
   'valid.spf.com': { err: null, value: [['v=spf1 include:_spf.google.com -all']] },
+  '_spf.google.com': { err: null, value: [['v=spf1 +all']] },
   'google._domainkey.no.spf.com': { err: dnsErr(dns.NODATA) },
   'google._domainkey.valid.spf.com': { err: null, value: [['a value']] },
   '_dmarc.no.spf.com': { err: dnsErr(dns.NOTFOUND) },
@@ -91,8 +93,12 @@ describe('hasSPFSender', () => {
     ).toBe(false);
   });
 
-  it('should return true when the sender is allowed', async () => {
+  it('should return true when the sender is allowed on the top level', async () => {
     expect(await emailSetup.hasSPFSender('valid.spf.com', '_spf.google.com')).toBe(true);
+  });
+
+  it('should return true when the sender is allowed on the nested level', async () => {
+    expect(await emailSetup.hasSPFSender('valid_nested_include.spf.com', '_spf.google.com')).toBe(true);
   });
 });
 

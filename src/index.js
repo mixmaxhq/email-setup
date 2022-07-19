@@ -72,14 +72,16 @@ async function spfSetup(domain, { validations = {
  *   allows the provided sender to send emails, false otherwise.
  */
 async function hasSPFSender(domain, sender) {
-  let spfRecord = await _getSPFRecord(domain);
-  if (!spfRecord || !spfRecord.valid) return false;
-
-  return !!_.findWhere(spfRecord.mechanisms, {
-    prefixdesc: 'Pass',
-    type: 'include',
-    value: sender
-  });
+  try {
+    const report = await SpfInspector(domain, { maxDepth: 10, includes: [sender] }, true);
+    return report.found.includes.includes(sender);
+  } catch (err) {
+    if (_.contains(NO_DNS_RECORD, err.code || err.reason)) {
+      return false;
+    } else {
+      throw err;
+    }
+  }
 }
 
 /**
@@ -115,7 +117,7 @@ async function spfRecordResolvesWithinDnsLookupsLimit(domain, limit = 10) {
     const numberOfALookups = report.found.domains.length;
     return numberOfIncludeLookups + numberOfALookups <= limit;
   } catch (err) {
-    if (_.contains(NO_DNS_RECORD, err.code)) {
+    if (_.contains(NO_DNS_RECORD, err.code || err.reason)) {
       return false;
     } else {
       throw err;
