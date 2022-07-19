@@ -1,3 +1,10 @@
+### [1.1.1-alpha.1](https://github.com/mixmaxhq/email-setup/compare/v1.1.0...v1.1.1-alpha.1) (2022-07-19)
+
+
+### Bug Fixes
+
+* recursive search for hasSPFSender ([90db572](https://github.com/mixmaxhq/email-setup/commit/90db572d8bab1d6ff1fb6385c15aed1e39124b84))
+
 ## [1.1.0](https://github.com/mixmaxhq/email-setup/compare/v1.0.3...v1.1.0) (2022-07-19)
 
 

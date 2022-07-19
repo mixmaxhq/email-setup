@@ -1,6 +1,6 @@
 {
   "name": "email-setup",
-  "version": "1.1.0",
+  "version": "1.1.1-alpha.1",
   "description": "Collection of utilities for checking email configuration settings.",
   "main": "index.js",
   "repository": "https://github.com/mixmaxhq/email-setup",
