@@ -10,6 +10,7 @@
     "dmarc-parse": "^1.0.2",
     "promise-callbacks": "^3.0.0",
     "semver": "^5.4.1",
+    "spf-master": "^2.1.2",
     "spf-parse": "^1.0.4",
     "underscore": "^1.8.3"
   },
@@ -19,42 +20,44 @@
     "src"
   ],
   "devDependencies": {
-    "ava": "^0.22.0",
-    "ava-spec": "^1.1.0",
+    "@mixmaxhq/semantic-release-config": "^2.0.0",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-plugin-transform-async-to-generator": "^6.24.1",
-    "eslint": ">=3",
-    "eslint-config-mixmax": "^0.6.0",
-    "nyc": "^11.1.0",
-    "rewire": "^2.5.2",
-    "sinon": "^3.2.1"
+    "eslint": "^7.19.0",
+    "eslint-plugin-jest": "^24.7.0",
+    "jest": "^24.7.0",
+    "jest-junit": "^8.0.0",
+    "prettier": "^2.0.5",
+    "semantic-release": "^17.2.3"
   },
   "engines": {
     "node": ">= 6.9.1"
   },
   "scripts": {
     "babelBuild": "babel src -d dist/node",
-    "ci": "npm run lint && npm test",
+    "ci": "npm run lint && npm test -- --coverage",
     "lint": "eslint .",
     "prepublishOnly": "npm run babelBuild",
-    "report": "nyc ava",
-    "test": "ava"
+    "semantic-release": "SEMANTIC_COMMITLINT_SKIP=1dedf6783b294d7e935971c56f1648274ea39abb semantic-release",
+    "test": "jest"
   },
-  "ava": {
-    "require": [
-      "babel-register"
+  "release": {
+    "extends": "@mixmaxhq/semantic-release-config"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx}",
+      "!**/node_modules/**",
+      "!**/vendor/**"
     ],
-    "timeout": "60s",
-    "files": [
-      "spec/**/*Spec.js"
-    ]
-  },
-  "nyc": {
-    "exclude": [
-      "index.js",
-      "spec",
-      "dist"
+    "coverageReporters": [
+      "text",
+      "cobertura"
+    ],
+    "reporters": [
+      "default",
+      "jest-junit"
     ]
   }
 }
