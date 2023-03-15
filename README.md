@@ -60,3 +60,9 @@ const { hasDKIMRecordForSelector } = require('email-setup');
 
 let isSetup = await hasDKIMRecordForSelector('foo.com', 'google');
 ```
+
+## Publishing a new version
+
+```
+GH_TOKEN=xxx npx semantic-release --no-ci
+```
