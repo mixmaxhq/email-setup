@@ -20,7 +20,7 @@
     "src"
   ],
   "devDependencies": {
-    "@mixmaxhq/semantic-release-config": "^2.0.0",
+    "@mixmaxhq/semantic-release-config": "^2.0.3",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-plugin-transform-async-to-generator": "^6.24.1",
