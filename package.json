@@ -9,6 +9,7 @@
   "dependencies": {
     "dmarc-parse": "^1.0.2",
     "promise-callbacks": "^3.0.0",
+    "psl": "^1.1.25",
     "semver": "^5.4.1",
     "spf-master": "^2.1.2",
     "spf-parse": "^1.0.4",

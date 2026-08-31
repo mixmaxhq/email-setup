@@ -53,12 +53,23 @@ let isSetup = await hasDKIMRecordForSelector('foo.com', 'google');
 
 ### DMARC
 
-#### dmarcSetup
-`hasDKIMRecordForSelector` will return one of `NOT_SETUP`, `INVALID` or `SETUP`.
-```js
-const { hasDKIMRecordForSelector } = require('email-setup');
+DMARC records live as `TXT` records under `_dmarc.<domain>`, alongside whatever
+else a domain owner has published there. Only records that begin with the
+`v=DMARC1` version tag are DMARC records; anything else under `_dmarc` is
+ignored.
 
-let isSetup = await hasDKIMRecordForSelector('foo.com', 'google');
+A subdomain that publishes no record of its own is governed by the policy on
+its organizational domain — its `sp` tag, defaulting to `p`. So when no record
+is found on the domain itself, `dmarcSetup` makes one further lookup on the
+organizational domain, as RFC 7489 §6.6.3 requires. It never walks further up
+the tree than that.
+
+#### dmarcSetup
+`dmarcSetup` will return one of `NOT_SETUP`, `INVALID` or `SETUP`.
+```js
+const { dmarcSetup } = require('email-setup');
+
+let isSetup = await dmarcSetup('foo.com');
 ```
 
 ## Publishing a new version
