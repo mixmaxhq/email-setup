@@ -25,11 +25,14 @@ const NO_DNS_RECORD = [dns.NOTFOUND, dns.NODATA, dns.SERVFAIL];
 // RFC 7489 §6.3 requires a DMARC record to begin with the version tag,
 // `v=DMARC1`, and §6.6.3 requires records that don't to be discarded. Anything
 // else published at `_dmarc.<domain>` - a domain-verification token, say - is
-// not a DMARC record and must not be parsed as one. Tag names are
+// not a DMARC record and must not be parsed as one. The tag value ends at the
+// first separator, so `v=DMARC10` names a different version and the record is
+// discarded - the version tag must be `DMARC1` and nothing more. Tag names are
 // case-insensitive; we're lenient about the value's case too, so that a
 // record with a mistyped version tag surfaces as `INVALID` (something is
-// published at `_dmarc` and it's broken) rather than as `NOT_SETUP`.
-const DMARC_VERSION_TAG = /^v\s*=\s*DMARC1/i;
+// published at `_dmarc` and it's broken) rather than as `NOT_SETUP`. See
+// `dmarcSetup` for the second half of that behaviour.
+const DMARC_VERSION_TAG = /^v\s*=\s*DMARC1\s*(?:;|$)/i;
 
 // Warnings from "spf-parse"
 const ALL_MECHANISM_IS_NOT_THE_LAST = 'One or more mechanisms were found after the "all" mechanism. These mechanisms will be ignored';
@@ -287,7 +290,12 @@ async function _getDMARCRecord(domain) {
 async function dmarcSetup(domain) {
   let dmarcRecord = await _getDMARCRecord(domain);
   if (!dmarcRecord) return NOT_SETUP;
-  return !_.isEmpty(dmarcRecord.tags) ? SETUP : INVALID;
+
+  // "dmarc-parse" drops the version tag when its value is not exactly
+  // `DMARC1` - a lower-case `v=dmarc1`, say - but it keeps the other tags. So
+  // the presence of any tag is not enough: a record without the version tag is
+  // published but broken, which is `INVALID`.
+  return dmarcRecord.tags && dmarcRecord.tags.v ? SETUP : INVALID;
 }
 
 

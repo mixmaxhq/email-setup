@@ -91,6 +91,15 @@ const domainSPFResults = {
   // Carries the version tag, but with a value `dmarc-parse` rejects, so it
   // parses to no tags at all: something is published, and it's broken.
   '_dmarc.malformed.dmarc-test.com': { err: null, value: [['v=dmarc1']] },
+  // A mistyped version tag that keeps a policy tag. "dmarc-parse" drops the
+  // version and keeps the policy, so the record still parses to a tag.
+  '_dmarc.mistyped-version.dmarc-test.com': { err: null, value: [['v=dmarc1; p=none']] },
+  // `DMARC10` is a different version, so neither record is a DMARC1 record.
+  // The first domain's organizational domain publishes no record either, so
+  // the discard is visible in the verdict.
+  '_dmarc.wrong-version.no-dmarc-anywhere.com': { err: null, value: [['v=DMARC10; p=reject']] },
+  '_dmarc.wrong-version.inherits.com': { err: null, value: [['v=DMARC10; p=reject']] },
+  '_dmarc.inherits.com': { err: null, value: [['v=DMARC1; p=reject; sp=reject']] },
   '_dmarc.chunked.dmarc-test.com': { err: null, value: [chunkRecord(LONG_DMARC_RECORD)] },
   // The organizational domain shared by the `*.dmarc-test.com` domains above.
   '_dmarc.dmarc-test.com': { err: dnsErr(dns.NOTFOUND) },
@@ -232,6 +241,24 @@ describe('dmarcSetup', () => {
 
   it('should return \'invalid\' for a DMARC record that parses to no tags', async () => {
     expect(await emailSetup.dmarcSetup('malformed.dmarc-test.com')).toBe(INVALID);
+  });
+
+  it('should return \'invalid\' for a record whose version tag is mistyped', async () => {
+    // "dmarc-parse" drops the mistyped version tag but keeps `p=none`, so the
+    // record still parses to one tag. The version tag is what makes a record a
+    // DMARC record, so its absence is `INVALID`, not `SETUP`.
+    expect(await emailSetup.dmarcSetup('mistyped-version.dmarc-test.com')).toBe(INVALID);
+  });
+
+  it('should discard a record that names another DMARC version', async () => {
+    // `v=DMARC10` is not `v=DMARC1`, so RFC 7489 §6.6.3 discards the record.
+    // The organizational domain here publishes no record either, so the
+    // discard decides the verdict.
+    expect(await emailSetup.dmarcSetup('wrong-version.no-dmarc-anywhere.com')).toBe(NOT_SETUP);
+
+    // The discard leaves the subdomain governed by its organizational domain,
+    // which does publish a policy here.
+    expect(await emailSetup.dmarcSetup('wrong-version.inherits.com')).toBe(SETUP);
   });
 
   it('should ignore a non-DMARC record published alongside the DMARC record', async () => {
