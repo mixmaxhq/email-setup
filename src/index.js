@@ -10,6 +10,7 @@ var dns = require('dns');
 const _ = require('underscore');
 const { deferred } = require('promise-callbacks');
 const dmarcParse = require('dmarc-parse');
+const psl = require('psl');
 const spfParse = require('spf-parse');
 const { SpfInspector } = require('spf-master');
 
@@ -20,6 +21,15 @@ const { SpfInspector } = require('spf-master');
 // seem to prefer that response code instead of NOTFOUND (i.e. the
 // nameservers at datagram.com).
 const NO_DNS_RECORD = [dns.NOTFOUND, dns.NODATA, dns.SERVFAIL];
+
+// RFC 7489 §6.3 requires a DMARC record to begin with the version tag,
+// `v=DMARC1`, and §6.6.3 requires records that don't to be discarded. Anything
+// else published at `_dmarc.<domain>` - a domain-verification token, say - is
+// not a DMARC record and must not be parsed as one. Tag names are
+// case-insensitive; we're lenient about the value's case too, so that a
+// record with a mistyped version tag surfaces as `INVALID` (something is
+// published at `_dmarc` and it's broken) rather than as `NOT_SETUP`.
+const DMARC_VERSION_TAG = /^v\s*=\s*DMARC1/i;
 
 // Warnings from "spf-parse"
 const ALL_MECHANISM_IS_NOT_THE_LAST = 'One or more mechanisms were found after the "all" mechanism. These mechanisms will be ignored';
@@ -135,15 +145,28 @@ async function _getSPFRecord(domain) {
 
   // `resolveTxt` always returns an array of records, so we need to
   // identify the SPF record.
-  let rawSPFRecord = _.chain(records)
-    .flatten()
-    .find((val) => val.startsWith('v=spf1'))
-    .value();
+  let rawSPFRecord = _.find(_joinTXTRecordChunks(records), (val) => val.startsWith('v=spf1'));
   if (!rawSPFRecord) {
     return null;
   }
 
   return spfParse(rawSPFRecord);
+}
+
+/**
+ * Joins each TXT record's chunks back into a single string.
+ *
+ * DNS splits any character-string longer than 255 bytes, so `dns.resolveTxt`
+ * hands back an array of chunks per record (`string[][]`). Flattening across
+ * records instead of joining within them both truncates a long record to its
+ * first chunk and lets the chunks of unrelated records be treated as records
+ * in their own right.
+ *
+ * @param {Array<Array<string>>|null} records The records as returned by `dns.resolveTxt`.
+ * @returns {Array<string>} One joined string per record.
+ */
+function _joinTXTRecordChunks(records) {
+  return _.map(records || [], (chunks) => (_.isArray(chunks) ? chunks.join('') : chunks));
 }
 
 /**
@@ -202,21 +225,23 @@ async function hasDKIMRecordForSelector(domain, selector) {
 }
 
 /**
- * Retrieves the parsed DMARC record for the given domain.
+ * Retrieves the parsed DMARC record published at exactly `_dmarc.<domain>`.
+ *
+ * `_dmarc.<domain>` may hold TXT records that aren't DMARC records at all, so
+ * we select on the version tag rather than taking whichever record the
+ * resolver happens to return first.
  *
  * @param {string} domain The domain to check the DMARC record for.
- * @returns {Promise} Resolves to the parsed DMARC record if it exists, null
- *   otherwise.
+ * @returns {Promise} Resolves to the parsed DMARC record if one is published
+ *   at this exact domain, null otherwise.
  */
-async function _getDMARCRecord(domain) {
+async function _getDMARCRecordAtDomain(domain) {
   let records = await _getDNSTXTRecords(`_dmarc.${domain}`);
 
-  // `resolveTxt` always returns an array of records, so we need to
-  // identify the DMARC record - it should be the only one.
-  let rawDMARCRecord = _.chain(records)
-    .flatten()
-    .first()
-    .value();
+  // If several records carry the version tag the domain is misconfigured;
+  // taking the first keeps us reporting "configured", which is the bar this
+  // library measures.
+  let rawDMARCRecord = _.find(_joinTXTRecordChunks(records), (val) => DMARC_VERSION_TAG.test(val));
   if (!rawDMARCRecord) {
     return null;
   }
@@ -225,7 +250,35 @@ async function _getDMARCRecord(domain) {
 }
 
 /**
- * Checks whether a domain has setup a valid DMARC record.
+ * Retrieves the parsed DMARC record in force for the given domain.
+ *
+ * @param {string} domain The domain to check the DMARC record for.
+ * @returns {Promise} Resolves to the parsed DMARC record if it exists, null
+ *   otherwise.
+ */
+async function _getDMARCRecord(domain) {
+  let dmarcRecord = await _getDMARCRecordAtDomain(domain);
+  if (dmarcRecord) return dmarcRecord;
+
+  // RFC 7489 §6.6.3: when a subdomain publishes no DMARC record of its own,
+  // the policy in force is the one at its organizational domain - the `sp`
+  // tag there (defaulting to `p`) is what governs the subdomain. The RFC
+  // specifies exactly these two lookups, so we never walk further up the tree.
+  //
+  // `psl.get` returns null for input that has no organizational domain (a
+  // public suffix itself, say), which means there's no fallback to make. It
+  // also lower-cases its result and drops any trailing root label, so we
+  // normalise the same way before comparing - otherwise an apex domain written
+  // in mixed case looks like a subdomain of itself and gets queried twice.
+  const orgDomain = psl.get(domain);
+  if (!orgDomain || orgDomain === domain.toLowerCase().replace(/\.$/, '')) return null;
+
+  return _getDMARCRecordAtDomain(orgDomain);
+}
+
+/**
+ * Checks whether a domain has setup a valid DMARC record, either on the domain
+ * itself or - for a subdomain - on its organizational domain.
  *
  * @param {string} domain The domain to check the DMARC record for.
  * @returns {Promise} Resolves to true if the domain has a valid DMARC record,
