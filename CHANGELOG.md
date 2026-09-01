@@ -1,3 +1,10 @@
+### [1.1.2](https://github.com/mixmaxhq/email-setup/compare/v1.1.1...v1.1.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* load spf-master only when it is used ([2c1392d](https://github.com/mixmaxhq/email-setup/commit/2c1392d64644f25d2ab7ee9b51ab6dbe1023cfcd))
+
 ### [1.1.1](https://github.com/mixmaxhq/email-setup/compare/v1.1.0...v1.1.1) (2026-08-31)
 
 
