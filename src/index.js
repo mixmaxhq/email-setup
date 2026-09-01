@@ -12,7 +12,13 @@ const { deferred } = require('promise-callbacks');
 const dmarcParse = require('dmarc-parse');
 const psl = require('psl');
 const spfParse = require('spf-parse');
-const { SpfInspector } = require('spf-master');
+
+// `spf-master` is an ES module. A `require` of it at the top of this file runs
+// whenever a consumer loads this library, even a consumer that never calls
+// `spfRecordResolvesWithinDnsLookupsLimit` - the only function that needs it.
+// Some CommonJS consumers cannot load an ES module that way, so we load it on
+// first use instead. See `_getSpfInspector`.
+let spfInspector;
 
 // DNS error codes to use to determine if a record doesn't exist versus
 // an error with retrieving a DNS record (i.e. a network issue).
@@ -122,7 +128,7 @@ async function hasSPFSender(domain, sender) {
  */
 async function spfRecordResolvesWithinDnsLookupsLimit(domain, limit = 10) {
   try {
-    const report = await SpfInspector(domain, { maxDepth: limit }, true);
+    const report = await _getSpfInspector()(domain, { maxDepth: limit }, true);
 
     const numberOfIncludeLookups = report.found.includes.length;
     const numberOfALookups = report.found.domains.length;
@@ -134,6 +140,21 @@ async function spfRecordResolvesWithinDnsLookupsLimit(domain, limit = 10) {
       throw err;
     }
   }
+}
+
+/**
+ * Returns `SpfInspector`, loading `spf-master` on the first call.
+ *
+ * Only `spfRecordResolvesWithinDnsLookupsLimit` needs this dependency, so a
+ * consumer that never calls that function never loads it.
+ *
+ * @returns {function} The `SpfInspector` function.
+ */
+function _getSpfInspector() {
+  if (!spfInspector) {
+    spfInspector = require('spf-master').SpfInspector;
+  }
+  return spfInspector;
 }
 
 /**
